@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from darts.models.forecasting.gradient_boosted_model import LightGBMModel
+from darts.models.forecasting.lgbm import LightGBMModel
 from loguru import logger
 
 

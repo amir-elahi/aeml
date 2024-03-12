@@ -390,3 +390,8 @@ $RECYCLE.BIN/
 # End of https://www.toptal.com/developers/gitignore/api/linux,macos,python,pycharm,windows,vim,visualstudiocode,jupyternotebooks
 scratch/
 wandb/
+
+
+# Custom directories to be excluded
+# Ignore the RawData folder
+RawData/
