@@ -91,7 +91,7 @@ set_seed(42)
 prediction_length = 64
 startPoint = 0
 endPoint = len(y)
-skip = 96
+skip = 96 * 3
 
 pipeline = ChronosPipeline.from_pretrained(
     "amazon/chronos-t5-tiny",
@@ -153,6 +153,8 @@ for step in range(0, (len(Ts) - 512 - prediction_length)):
     FullLow.append(low)
     FullHigh.append(high)
 
+FullForecast_df = [ts.pd_dataframe() for ts in FullForecast]
+
 # for i in range(0, len(FullForecast)):
 #     FullForecast[i][-1].plot(label = f'step {i} Forecast')
 #     plt.fill_between(TheSeries[TARGETS_clean[0]][-prediction_length:].time_index, FullLow[i][-1], FullHigh[i][-1], color="tomato", alpha=0.3)
@@ -171,7 +173,7 @@ if not os.path.exists(output_path):
     os.makedirs(output_path)
 
 with open(output_path + f'{commit_id}_FullForecast_{date_string}_Skip{skip}.pkl', 'wb') as f:
-    pickle.dump(FullForecast, f)
+    pickle.dump(FullForecast_df, f)
 with open(output_path + f'{commit_id}_FullLow_{date_string}_Skip{skip}.pkl', 'wb') as f:
     pickle.dump(FullLow, f)
 with open(output_path + f'{commit_id}_FullHigh_{date_string}_Skip{skip}.pkl', 'wb') as f:
