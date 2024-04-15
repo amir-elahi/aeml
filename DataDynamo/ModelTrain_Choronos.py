@@ -57,8 +57,9 @@ Notes:
 
 Version History:
     <Date>, <Author>, <Description of Changes>
-    6 April 2022 AE Add the historical forecast and averaging of the data using Chronos model.
-    8 April 2022 AE Configure the plotting and saving of the output. Adding flags to make it easier to use.
+    6  April 2022 AE Add the historical forecast and averaging of the data using Chronos model.
+    8  April 2022 AE Configure the plotting and saving of the output. Adding flags to make it easier to use.
+    14 April 2022 AE Minor changes in plotting.
 
 # =============================================================================
 """
@@ -96,7 +97,7 @@ set_seed(42)
 prediction_length = 50
 startPoint = 41000
 endPoint = len(y) -148000
-skip = 6
+skip = 5
 savePickles = False # True will save pickles and don't plot, False will plot and don't save pickles
 historic = False # True will perform historical forecast, False will perform the normal forecast
 
@@ -240,7 +241,8 @@ else:
         '''Plotting'''
         # =============================================================================
         # Plot the time series
-        plt.figure(figsize=(3.5*3, 3.5*3))
+        fig = plt.figure(figsize=(3.5*3, 0.6*3.5*3))
+        fig.subplots_adjust(bottom=0.2, left= 0.1)
 
         TheSeries[TARGETS_clean[0]].plot(label=f'True values averaging every {skip - 1} points')
         TheSeries[TARGETS_clean[0]][:512].plot(label=f'First 512 true values')
@@ -251,10 +253,11 @@ else:
         '''Plotting'''
         # =============================================================================
         # Plot the time series
-        plt.figure(figsize=(3.5*3, 3.5*3))
+        fig = plt.figure(figsize=(2.5*3.5/1.2, 1.8*3.5/1.2))
+        fig.subplots_adjust(bottom=0.2, left= 0.15)
 
-        TheSeries[TARGETS_clean[0]].plot(label=f'True values averaging every {skip - 1} points')
-        TheSeries[TARGETS_clean[0]][-prediction_length-512:-prediction_length].plot(label=f'True input values')
+        TheSeries[TARGETS_clean[0]].plot(label=f'True values')
+        # TheSeries[TARGETS_clean[0]][-prediction_length-512:-prediction_length].plot(label=f'True input values')
 
         Forecast.plot(label='Forecast')
         plt.fill_between(Forecast.time_index, FullLow[0], FullHigh[0], color="tomato", alpha=0.3, label="80% prediction interval")
@@ -310,5 +313,8 @@ else:
     plt.xticks(rotation='vertical', fontproperties = fTicks)
     plt.yticks(fontproperties = fTicks)
     # =============================================================================
+    # Adjust the y and x limits
+    # plt.ylim(99.52176895141602, 122.39603195190428)
+    # plt.xlim(19787.72662037037, 19788.139120370368 )
 
     plt.show()
