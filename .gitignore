@@ -395,3 +395,4 @@ wandb/
 # Custom directories to be excluded
 # Ignore the RawData folder
 RawData/
+Output/

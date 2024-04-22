@@ -66,7 +66,7 @@ Version History:
 
 
 
-df = pd.read_pickle('/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
+df = pd.read_pickle('./DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
 
 df = df.dropna()
 
@@ -94,10 +94,10 @@ scal = y_transformer.transform(y)
 set_seed(42)
 
 #! This part is where we define the torch tensor to feed it to the model. Note that it is not scaled
-prediction_length = 50
-startPoint = 41000
-endPoint = len(y) -148000
-skip = 5
+prediction_length = 64
+startPoint = 0
+endPoint = len(y)
+skip = 24
 savePickles = False # True will save pickles and don't plot, False will plot and don't save pickles
 historic = False # True will perform historical forecast, False will perform the normal forecast
 
