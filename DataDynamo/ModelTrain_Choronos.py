@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 
 plt.style.reload_library()
-plt.style.use('grid')
+# plt.style.use('grid')
 
 from matplotlib import rcParams
 rcParams['font.family'] = 'sans-serif'
@@ -52,8 +52,7 @@ Notes:
     < >.
 
 #TODO:
-    Make the figures more readable and better looking.
-    Calculate the MASE for the model.
+    < >.
 
 Version History:
     <Date>, <Author>, <Description of Changes>
@@ -66,7 +65,7 @@ Version History:
 
 
 
-df = pd.read_pickle('/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
+df = pd.read_pickle('./DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
 
 df = df.dropna()
 
@@ -95,15 +94,15 @@ set_seed(42)
 
 #! This part is where we define the torch tensor to feed it to the model. Note that it is not scaled
 prediction_length = 50
-startPoint = 41000
-endPoint = len(y) -148000
-skip = 5
-savePickles = False # True will save pickles and don't plot, False will plot and don't save pickles
-historic = False # True will perform historical forecast, False will perform the normal forecast
+startPoint = 0
+endPoint = len(y)
+skip = 1
+savePickles = True # True will save pickles and don't plot, False will plot and don't save pickles
+historic = True # True will perform historical forecast, False will perform the normal forecast
 
 pipeline = ChronosPipeline.from_pretrained(
     "amazon/chronos-t5-tiny",
-    device_map="cpu",
+    device_map="cuda",
     torch_dtype=torch.bfloat16,
 )
 
