@@ -1,24 +1,17 @@
 import pandas as pd 
 import numpy as np
 from darts import TimeSeries
-from darts.models import RegressionModel, LightGBMModel
-from darts.metrics import mape, mae, ope
-from sklearn.linear_model import BayesianRidge
-from aeml.models.gbdt.gbmquantile import LightGBMQuantileRegressor
 from aeml.models.gbdt.run import run_ci_model, run_model
 from aeml.models.gbdt.settings import *
-from aeml.models.gbdt.plot import make_forecast_plot
-
 
 from aeml.preprocessing.resample import resample_regular
 from darts.dataprocessing.transformers import Scaler
 import joblib
 
-import matplotlib.pyplot as plt
-plt.style.reload_library()
-plt.style.use('science')
-from matplotlib import rcParams
-rcParams['font.family'] = 'sans-serif'
+import sys
+sys.path.insert(0, '/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/Utils2/')
+from Plot import plot_historical_forecast
+from metrics import get_metrics
 
 """
 # =============================================================================
@@ -48,9 +41,11 @@ Notes:
 Version History:
     <Date>, <Author>, <Description of Changes>
     14  April 2022 AE Add header to the script. Make TI-1213 and minor fixes.
-
+    23  April 2022 AE Add the more efficient way of averaging. This should also happem in other scripts.
 # =============================================================================
 """
+
+np.random.seed(42)
 
 df = pd.read_pickle('./DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
 
@@ -153,7 +148,7 @@ MEAS_COLUMNS = [ 'T-19', 'TI-3', 'F-19','F-11', 'TI-1213','TI-35']
 
 startPoint = 0
 endPoint = len(df)
-skip = 48
+skip = 1
 
 y = TimeSeries.from_dataframe(df, value_cols=TARGETS_clean, time_col='Date')
 x = TimeSeries.from_dataframe(df, value_cols=MEAS_COLUMNS, time_col='Date')
@@ -165,24 +160,40 @@ x = transformer.fit_transform(x)
 y_transformer = Scaler()
 y = y_transformer.fit_transform(y)
 
-def average_timeseries(y, startPoint, endPoint, skip):
-    averaged_values = []
-    for i in range(startPoint, endPoint, skip):
-        avg = sum(y.values()[i:i+skip]) / skip
-        averaged_values.append(avg)
-    return averaged_values
+# This averages skip point in the time series. example: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10: skip=2, then 1, 2.5, 4.5, 6.5, 8.5
+def average_timeseries(df, skip):
+    return df.rolling(window=skip, min_periods=1).mean()[::skip]
 
-Ts3 = average_timeseries(y, startPoint, endPoint, skip)
-Ts3 = TimeSeries.from_times_and_values(times = y[startPoint:endPoint:skip].time_index, values = Ts3)
-Ts3 = Ts3.pd_dataframe()
-Ts3.columns = y.pd_dataframe().columns
-Ts3 = TimeSeries.from_dataframe(Ts3)
+# Convert TimeSeries to DataFrame for processing
+df_y = y.pd_dataframe()
+df_x = x.pd_dataframe()
 
-y = Ts3
+# Apply averaging function
+temp_y = average_timeseries(df_y, skip)
+temp_y.columns = y.pd_dataframe().columns
+ts_y = TimeSeries.from_dataframe(temp_y)
+df_y= temp_y
 
-y_train, y_val = y[:-64] , y[-64:]
-x_train, x_val = x[:-64] , x[-64:]
+y = ts_y
 
+temp_x = average_timeseries(df_x, skip)
+temp_x.columns = x.pd_dataframe().columns
+ts_x = TimeSeries.from_dataframe(temp_x)
+df_x = temp_x
+
+x = ts_x
+
+ds = int(92241 / skip)
+
+# Break the dataset so that we don't consider the zero values in the end. The time index is roughly 2024-03-01 16:13:20
+y = y[:ds]
+x = x[:ds]
+
+# Break the dataset into train and validation
+train_percentage = 0.1
+train_length = int(train_percentage * len(y))
+y_train, y_val = y[:train_length] , y[train_length:]
+x_train, x_val = x[:train_length] , x[train_length:]
 
 ######################################
 
@@ -253,16 +264,18 @@ settingsAmir = {
 # Check the step and setting be relavant
 step = 64
 
-#gbdt_all_data_0 = run_model(train_x, train_y[TARGETS_clean[0]], **settingsAmir, output_chunk_length=step)
+my_dict = {
+'quantiles' : (0.1, 0.5, 0.9)
+}
 
 gbdt_all_data_0 = run_model( x_train, y_train[TARGETS_clean[0]], **settingsAmir, 
-                            output_chunk_length = step)
+                            output_chunk_length = step, quantiles= my_dict.get('quantiles') )
 
 # forecast_0 = gbdt_all_data_0.forecast(n=len(yWESPon[TARGETS_clean[0]]),series = yWESPoff[TARGETS_clean[0]])
 # forecast_0 = gbdt_all_data_0.forecast(n=1 ,series = train_yWESPoff[TARGETS_clean[0]])
 
 historical_forceasts_0 = gbdt_all_data_0.historical_forecasts(
-    series=y[TARGETS_clean[0]],  past_covariates=x, start=512 , retrain=False, forecast_horizon=step, show_warnings=False
+    series=y[TARGETS_clean[0]],  past_covariates=x, start=train_length , retrain=False, forecast_horizon=step, show_warnings=False
 )
 
 # gbdt_all_data_0 = RegressionModel(lags=10, model=BayesianRidge(), lags_past_covariates=5)
@@ -284,67 +297,41 @@ historical_forceasts_0 = gbdt_all_data_0.historical_forecasts(
 
 # forecast_0=gbdt_all_data_0.predict(series=yWESPoff[TARGETS_clean[0]], n = 300, past_covariates=x)
 
-'''Calculating metrics'''
-
-def get_metrics(actual, predicted): 
-    try:
-        actual = TimeSeries.from_series(actual)
-        predicted = TimeSeries.from_series(predicted)
-    except:
-        None
-
-    mae_score = mae(actual, predicted, intersect=True)
-    try:
-        mape_score = mape(actual, predicted, intersect=True)
-    except:
-        mape_score = None
-
-    ope_score = ope(actual, predicted, intersect=True)
-    return {
-        'mae': mae_score,
-        'mape': mape_score,
-        'ope': ope_score
-    }
 
 '''Scale back'''
 ts1 = historical_forceasts_0[1]
-ts2 = historical_forceasts_0[0]
-
 temp = TimeSeries.from_series(
-    pd.concat([ts1.pd_series(), ts2.pd_series()], axis=1, keys=['ts1', 'ts2'])
+    pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[TARGETS_clean[0], 'dummy'])
 )
+y_forecast = y_transformer.inverse_transform(temp)[TARGETS_clean[0]]
 
-
-temp = y_transformer.inverse_transform(temp)
-
-metrics = get_metrics(y_transformer.inverse_transform(y)[TARGETS_clean[0]],
-                      temp['ts1']
+ts1 = historical_forceasts_0[0]
+temp = TimeSeries.from_series(
+    pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[TARGETS_clean[0], 'dummy'])
 )
+lower_percentile = y_transformer.inverse_transform(temp)[TARGETS_clean[0]].pd_dataframe()
 
-print(metrics)
+ts1 = historical_forceasts_0[2]
+temp = TimeSeries.from_series(
+    pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[TARGETS_clean[0], 'dummy'])
+)
+higher_percentile = y_transformer.inverse_transform(temp)[TARGETS_clean[0]].pd_dataframe()
 
+y_actual = y_transformer.inverse_transform(y)[TARGETS_clean[0]]
 
-'''Plotting'''
+try:
+    metrics = get_metrics(actual = y_actual,
+                          predicted = y_forecast)
+    print(metrics)
+except Exception as e:
+    metrics = None
+    print(f'An error occured during metrics calcilations: {e}')
 
-y_transformer.inverse_transform(y_train)[TARGETS_clean[0]].plot(label='Train Values')
-y_transformer.inverse_transform(y_val)[TARGETS_clean[0]].plot(label='True Values')
-temp['ts1'].plot(label='Prediction by ML')
-
-'''Plot Information and decoration'''
-plt.ylabel(r'Emissions [$\mathrm{mg/nm^3}$]', fontsize=14)
-plt.xlabel('Date', fontsize=14)
-adsorbent_in_plot = r'2-Amino-2-methylpropanol $\mathrm{C_4H_{11}NO}$'
-plt.title( f'{adsorbent_in_plot} with step time {10*step*skip/60} min\n {metrics}'
-          , fontsize=18, fontweight='extra bold')
-
-# Add a frame around the plot area
-plt.gca().spines['top'].set_visible(True)
-plt.gca().spines['right'].set_visible(True)
-plt.gca().spines['bottom'].set_visible(True)
-plt.gca().spines['left'].set_visible(True)
-
-# Adjust font size for tick labels
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=16)
-
-plt.show()
+plot_historical_forecast(df = y_actual.pd_dataframe(),
+                        forecast = y_forecast.pd_dataframe(),
+                        lower_percentile = lower_percentile.values.ravel(),
+                        higher_percentile = higher_percentile.values.ravel(),
+                        target_col = TARGETS_clean[0],
+                        time_col = 'Date',
+                        title = None,
+)                        

@@ -69,14 +69,12 @@ df = pd.read_pickle('./DataDynamo/RawData/New_campaigns/202403 SCOPE data set dy
 
 df = df.dropna()
 
+df['TI-1213'] = np.where(df['valve position'] == 1, df['TI-13'], df['TI-12'])
+
 TARGETS_clean = ['AMP-4', 'PZ-4'] 
 
-MEAS_COLUMNS = [
-     'TI-3',
-     'TI-35',
-     'F-11',
-     'F-19',
-     'T-19']
+MEAS_COLUMNS = [ 'T-19', 'TI-3', 'F-19','F-11', 'TI-1213','TI-35']
+
 
 y = TimeSeries.from_dataframe(df, value_cols=TARGETS_clean, time_col='Date')
 x = TimeSeries.from_dataframe(df, value_cols=MEAS_COLUMNS, time_col='Date')
