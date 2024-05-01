@@ -1,3 +1,5 @@
+# export LD_LIBRARY_PATH=/home/amir/miniconda/envs/pyprocessta/lib:$LD_LIBRARY_PATH
+
 from darts import TimeSeries
 from darts.metrics import mae, mape, ope, mase
 
@@ -43,15 +45,21 @@ def get_metrics(
     
     try:
         mape_score = mape(actual, predicted, intersect)
-    except:
-        mape_score = 'Could not calculate'
+    except Exception as e:
+        mape_score = e
 
-    ope_score = ope(actual, predicted, intersect)
+    try:
+        ope_score = ope(actual, predicted, intersect)
+    except Exception as e:
+        ope_score = e
 
     if train_actual is not None:
-        mase_score = mase(actual, predicted, train_actual, intersect)
+        try:
+            mase_score = mase(actual, predicted, train_actual, intersect)
+        except Exception as e:
+            mase_score = e
     else:
-        mase_score = 'Could not calculate'
+        mase_score = 'Did not provide the training actual values.'
 
     return {
         'mae': mae_score,
