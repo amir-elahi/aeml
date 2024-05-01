@@ -7,7 +7,7 @@ import wandb
 from darts.dataprocessing.transformers import Scaler
 
 import sys
-sys.path.insert(0, '/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/Utils2/')
+sys.path.insert(0, '/home/amir/Projects/aeml/DataDynamo/Utils2/')
 from sweep import start_sweep
 from metrics import get_metrics
 
@@ -32,7 +32,7 @@ MEAS_COLUMNS = [ 'T-19', 'TI-3', 'F-19','F-11', 'TI-1213','TI-35']
 
 startPoint = 0
 endPoint = len(df)
-skip = 1
+skip = 48
 
 y = TimeSeries.from_dataframe(df, value_cols=TARGETS_clean, time_col='Date')
 x = TimeSeries.from_dataframe(df, value_cols=MEAS_COLUMNS, time_col='Date')
@@ -74,17 +74,17 @@ y = y[:ds]
 x = x[:ds]
 
 # Break the dataset into train and validation
-train_percentage = 0.2
-validation_percentage = 0.1
+train_percentage = 0.4
+validation_percentage = 0.2
 validation_length = int(validation_percentage * len(y))
 train_length = int(train_percentage * len(y))
-y_train, y_val = y[:train_length] , y[train_length:validation_length]
-x_train, x_val = x[:train_length] , x[train_length:validation_length]
+y_train, y_val = y[:train_length] , y[train_length:validation_length+train_length]
+x_train, x_val = x[:train_length] , x[train_length:validation_length+train_length]
 
 
 sweep_config = {
-    "metric": {"goal": "minimize", "name": "score"},
-    "name": f"Sweep_Time_{timestr}_skip_{skip}",
+    "metric": {"goal": "minimize", "name": "mae_valid"},
+    "name": f"Sweep_Time_{timestr}_skip_{skip}_train_{train_percentage}",
     "method": "bayes",
     "parameters": {
         "lags":  {"min":  1,   "max": 190, "distribution": "int_uniform"},
@@ -135,28 +135,69 @@ def objective(config,
                                 output_chunk_length=64,
                                 quantiles=(0.1, 0.5, 0.9))
 
-    forecast_0 = gbdt_all_data_0.forecast(n=64 ,series = y_val[Target], past_covariates = x_val)
+    # forecast_0 = gbdt_all_data_0.forecast(n=64 ,series = y_train[Target], past_covariates = x_train)
+
+    backtest_train = gbdt_all_data_0.historical_forecasts(series=y_train[Target],
+                                                          past_covariates=x_train,
+                                                          forecast_horizon=64,
+                                                          stride=1,
+                                                          retrain=False,
+                                                          verbose=False)
+
+    backtest_valid = gbdt_all_data_0.historical_forecasts(series=y_val[Target],
+                                                          past_covariates=x_val,
+                                                          forecast_horizon=64,
+                                                          stride=1,
+                                                          retrain=False,
+                                                          verbose=False)
+
+    '''Scale back'''
+    ts1 = backtest_train[1]
+    temp = TimeSeries.from_series(
+        pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[Target, 'dummy'])
+    )
+    y_forecast_train = y_transformer.inverse_transform(temp)[Target]
+
+    ts1 = backtest_valid[1]
+    temp = TimeSeries.from_series(
+        pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[Target, 'dummy'])
+    )
+    y_forecast_valid = y_transformer.inverse_transform(temp)[Target]
+
+    y_actual = y_transformer.inverse_transform(y)[Target]
+
 
     ''' Calculating metrics'''
 
     try:
-        metrics = get_metrics(actual = y_val[Target] ,
-                          predicted = forecast_0[1])
+        metrics = get_metrics(actual = y_actual ,
+                          predicted = y_forecast_train)
         print(metrics)
     except Exception as e:
         metrics = None
         print(f'An error occured during metrics calcilations: {e}')
 
-    score = metrics['mae']
+    mae_train = metrics['mae']
 
-    return score
+    try:
+        metrics = get_metrics(actual = y_actual ,
+                          predicted = y_forecast_valid)
+        print(metrics)
+    except Exception as e:
+        metrics = None
+        print(f'An error occured during metrics calcilations: {e}')
+
+    mae_valid = metrics['mae']
+
+    return mae_train, mae_valid
 
 def main():
     wandb.init(project='aeml_amir')
-    score = objective(wandb.config)
+    mae_train, mae_valid = objective(wandb.config)
     wandb.log({
-        "score": score,
-        "skip": skip
+        "skip": skip,
+        "mae_valid": mae_valid,
+        "mae_train": mae_train
     })
 
 wandb.agent(sweep_id, function=main, count = 100)
