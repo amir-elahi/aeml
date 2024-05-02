@@ -55,7 +55,10 @@ def get_metrics(
 
     if train_actual is not None:
         try:
-            mase_score = mase(actual, predicted, train_actual, intersect)
+            mase_score = mase( actual_series = actual, 
+                              pred_series = predicted, 
+                              insample = train_actual, 
+                              intersect = intersect)
         except Exception as e:
             mase_score = e
     else:

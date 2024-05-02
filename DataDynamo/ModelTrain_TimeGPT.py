@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from darts import TimeSeries
 from nixtlats import NixtlaClient
+import os
 
 from darts.dataprocessing.transformers import Scaler
 from datetime import datetime
@@ -56,7 +57,7 @@ MEAS_COLUMNS = [ 'T-19', 'TI-3', 'F-19','F-11', 'TI-1213','TI-35']
 
 startPoint = 0
 endPoint = len(df)
-skip = 96
+skip = 48
 
 y = TimeSeries.from_dataframe(df, value_cols=TARGETS_clean, time_col='Date')
 x = TimeSeries.from_dataframe(df, value_cols=MEAS_COLUMNS, time_col='Date')
@@ -102,9 +103,10 @@ y = y[['Date', TARGETS_clean[0]]]
 
 ######################################
 # Train the model
+nixt_token = os.environ.get("NIXTLA_API_KEY")
+
 nixtla_client = NixtlaClient(
-    # defaults to os.environ.get("NIXTLA_API_KEY")
-    api_key = 'nixt-gGOq087YvsJojMkOp6rAW1Yf9BbdcOQzmODvaoRz8nk6hIEAkF9aBDHcANkE5q64suLtzhBVn73EvxOM'
+    api_key = nixt_token
 )
 
 nixtla_client.validate_api_key()
@@ -138,8 +140,9 @@ save_to_pickle(input_values, timegpt_fcst_df, output_file=output_file, location=
 
 # Load the forecast
 # location = '/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/Output/TimeGPT/'
-# input_file = f'timegpt_29042024-185829_Skip{skip}.pkl'
+# input_file = f'timegpt_29042024-170635_Skip{skip}.pkl'
 # input_values, timegpt_fcst_df = load_from_pickle(input_file=input_file, location=location)
+# print(input_values)
 
 # '''Scale back'''
 timegpt_fcst_df['Date'] = pd.to_datetime(timegpt_fcst_df['Date'])
