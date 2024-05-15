@@ -8,10 +8,8 @@ from aeml.preprocessing.resample import resample_regular
 from darts.dataprocessing.transformers import Scaler
 import joblib
 
-import sys
-sys.path.insert(0, '/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/Utils2/')
-from Plot import plot_historical_forecast
-from metrics import get_metrics
+from aeml.utils.Plot import *
+from aeml.utils.metrics import get_metrics
 
 """
 # =============================================================================
@@ -148,7 +146,7 @@ MEAS_COLUMNS = [ 'T-19', 'TI-3', 'F-19','F-11', 'TI-1213','TI-35']
 
 startPoint = 0
 endPoint = len(df)
-skip = 1
+skip = 48
 
 y = TimeSeries.from_dataframe(df, value_cols=TARGETS_clean, time_col='Date')
 x = TimeSeries.from_dataframe(df, value_cols=MEAS_COLUMNS, time_col='Date')
@@ -190,7 +188,7 @@ y = y[:ds]
 x = x[:ds]
 
 # Break the dataset into train and validation
-train_percentage = 0.1
+train_percentage = 0.4
 train_length = int(train_percentage * len(y))
 y_train, y_val = y[:train_length] , y[train_length:]
 x_train, x_val = x[:train_length] , x[train_length:]
@@ -226,19 +224,19 @@ x_train, x_val = x[:train_length] , x[train_length:]
 # Best Run: https://wandb.ai/amir_elahi/aeml_amir/runs/c48z7bqh/overview?workspace=user-amirelahi-9877
 # Step 30
 settingsAmir = {
-    "bagging_fraction": 0.13321852266317588,
-    "bagging_freq": 0,
+    "bagging_fraction": 0.8846522786364932,
+    "bagging_freq": 9,
     "extra_trees": True,
-    "lag_1": -33,
-    "lag_2": -92,
-    "lag_3": -15,
-    "lag_4": -46,
-    "lag_5": -12,
-    "lag_6": -92,
-    "lags": 112,
-    "max_depth": 160,
-    "n_estimators": 476,
-    "num_leaves": 84,
+    "lag_1": -45,
+    "lag_2": -39,
+    "lag_3": -39,
+    "lag_4": -51,
+    "lag_5": -26,
+    "lag_6": -38,
+    "lags": 40,
+    "max_depth": 10,
+    "n_estimators": 919,
+    "num_leaves": 176,
 }
 
 
@@ -275,63 +273,71 @@ gbdt_all_data_0 = run_model( x_train, y_train[TARGETS_clean[0]], **settingsAmir,
 # forecast_0 = gbdt_all_data_0.forecast(n=1 ,series = train_yWESPoff[TARGETS_clean[0]])
 
 historical_forceasts_0 = gbdt_all_data_0.historical_forecasts(
-    series=y[TARGETS_clean[0]],  past_covariates=x, start=train_length , retrain=False, forecast_horizon=step, show_warnings=False
+    series=y[TARGETS_clean[0]],  past_covariates=x, start=train_length , retrain=False, forecast_horizon=step, show_warnings=False,
+    last_points_only=False
 )
 
-# gbdt_all_data_0 = RegressionModel(lags=10, model=BayesianRidge(), lags_past_covariates=5)
-# gbdt_all_data_0.fit(yWESPoff[TARGETS_clean[0]], past_covariates= x)
+for i in range(0, len(historical_forceasts_0[1])):
+    ts1 = historical_forceasts_0[1][i]
+    temp = TimeSeries.from_series(
+        pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[TARGETS_clean[0], 'dummy'])
+    )
+    historical_forceasts_0[1][i] = y_transformer.inverse_transform(temp)[TARGETS_clean[0]]
 
-# forecast_0 = gbdt_all_data_0.predict(n = 30 ,series=yWESPoff[TARGETS_clean[0]], past_covariates= x)
+y_forecast_list = []
+time_horizon = []
+for i in range(0,len(historical_forceasts_0[1][0])):
+    ts_values = [ts.values()[i] for ts in historical_forceasts_0[1]]
+    ts_times = [ts.time_index[i] for ts in historical_forceasts_0[1]]
+    ts = TimeSeries.from_times_and_values(pd.DatetimeIndex(ts_times), ts_values)
+    time_horizon.append(f"{((i + 1) * skip * 10 / 60 / 60):.2f}") # In hours
+    y_forecast_list.append(ts)
 
-#######################################
-
-
-# gbdt_all_data_0 = LightGBMModel(
-#     lags=100,
-#     lags_past_covariates=100,
-#     output_chunk_length=10,
-#     verbose=-1
-# )
-
-# gbdt_all_data_0.fit(yWESPoff[TARGETS_clean[0]], past_covariates=x)
-
-# forecast_0=gbdt_all_data_0.predict(series=yWESPoff[TARGETS_clean[0]], n = 300, past_covariates=x)
+y_actual_list = [y_transformer.inverse_transform(y)[TARGETS_clean[0]]] * len(y_forecast_list)
 
 
 '''Scale back'''
-ts1 = historical_forceasts_0[1]
-temp = TimeSeries.from_series(
-    pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[TARGETS_clean[0], 'dummy'])
-)
-y_forecast = y_transformer.inverse_transform(temp)[TARGETS_clean[0]]
+# ts1 = historical_forceasts_0[1]
+# temp = TimeSeries.from_series(
+#     pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[TARGETS_clean[0], 'dummy'])
+# )
+# y_forecast = y_transformer.inverse_transform(temp)[TARGETS_clean[0]]
 
-ts1 = historical_forceasts_0[0]
-temp = TimeSeries.from_series(
-    pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[TARGETS_clean[0], 'dummy'])
-)
-lower_percentile = y_transformer.inverse_transform(temp)[TARGETS_clean[0]].pd_dataframe()
+# ts1 = historical_forceasts_0[0]
+# temp = TimeSeries.from_series(
+#     pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[TARGETS_clean[0], 'dummy'])
+# )
+# lower_percentile = y_transformer.inverse_transform(temp)[TARGETS_clean[0]].pd_dataframe()
 
-ts1 = historical_forceasts_0[2]
-temp = TimeSeries.from_series(
-    pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[TARGETS_clean[0], 'dummy'])
-)
-higher_percentile = y_transformer.inverse_transform(temp)[TARGETS_clean[0]].pd_dataframe()
+# ts1 = historical_forceasts_0[2]
+# temp = TimeSeries.from_series(
+#     pd.concat([ts1.pd_series(), ts1.pd_series()], axis=1, keys=[TARGETS_clean[0], 'dummy'])
+# )
+# higher_percentile = y_transformer.inverse_transform(temp)[TARGETS_clean[0]].pd_dataframe()
 
-y_actual = y_transformer.inverse_transform(y)[TARGETS_clean[0]]
+# y_actual = y_transformer.inverse_transform(y)[TARGETS_clean[0]]
 
-try:
-    metrics = get_metrics(actual = y_actual,
-                          predicted = y_forecast)
-    print(metrics)
-except Exception as e:
-    metrics = None
-    print(f'An error occured during metrics calcilations: {e}')
+# try:
+#     metrics = get_metrics(actual = y_actual,
+#                           predicted = y_forecast,
+#                           train_actual = y_train[TARGETS_clean[0]])
+#     print(metrics)
+# except Exception as e:
+#     metrics = None
+#     print(f'An error occured during metrics calculations: {e}')
 
-plot_historical_forecast(df = y_actual.pd_dataframe(),
-                        forecast = y_forecast.pd_dataframe(),
-                        lower_percentile = lower_percentile.values.ravel(),
-                        higher_percentile = higher_percentile.values.ravel(),
-                        target_col = TARGETS_clean[0],
-                        time_col = 'Date',
-                        title = None,
-)                        
+# plot_historical_forecast(df = y_actual.pd_dataframe(),
+#                         forecast = y_forecast.pd_dataframe(),
+#                         lower_percentile = lower_percentile.values.ravel(),
+#                         higher_percentile = higher_percentile.values.ravel(),
+#                         target_col = TARGETS_clean[0],
+#                         output_Name=f'LGBM_{skip}',
+#                         title = None,
+# )                        
+
+make_ae_error_plot(y_actual_list[::5] + [y_actual_list[-1]], 
+                   y_forecast_list[::5] + [y_forecast_list[-1]], 
+                   time_horizon[::5] + [time_horizon[-1]],
+                   Violin=False,
+                   Box=True,
+                   output_Name=f'LGBM_{skip}_Error')

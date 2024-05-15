@@ -8,11 +8,9 @@ from darts.dataprocessing.transformers import Scaler
 from datetime import datetime
 
 
-import sys
-sys.path.insert(0, '/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/Utils2/')
-from Plot import plot_historical_forecast
-from metrics import get_metrics
-from Save_and_Load import save_to_pickle, load_from_pickle
+from aeml.utils.Plot import plot_historical_forecast
+from aeml.utils.metrics import get_metrics
+from aeml.utils.Save_and_Load import save_to_pickle, load_from_pickle
 
 """
 # =============================================================================
@@ -95,12 +93,17 @@ x = df_x
 ds = int(92241 / skip)
 
 # Break the dataset so that we don't consider the zero values in the end. The time index is roughly 2024-03-01 16:13:20
-y = y[:ds]
-x = x[:ds]
+y = y[:ds+64]
+x = x[:ds+64]
 
 y = y.reset_index()
 y = y[['Date', TARGETS_clean[0]]]
 
+x = x.reset_index()
+x = x[['Date'] + MEAS_COLUMNS][:ds+64]
+
+
+input_y = pd.concat([y[:ds], x.drop('Date', axis=1)[:ds]], axis=1)
 ######################################
 # Train the model
 nixt_token = os.environ.get("NIXTLA_API_KEY")
@@ -111,40 +114,48 @@ nixtla_client = NixtlaClient(
 
 nixtla_client.validate_api_key()
 
-input_values = {
-    'df': y,
-    'h': 64,
-    'time_col': 'Date',
-    'target_col': TARGETS_clean[0],
-    'add_history': True,
-    'level': [80]
-}
+Fullforecast = []
+
+for i in range(0,10):
 
 
-timegpt_fcst_df = nixtla_client.forecast(df=input_values['df'],
-                                         h=input_values['h'],
-                                         time_col=input_values['time_col'],
-                                         target_col=input_values['target_col'],
-                                         add_history=input_values.get('add_history', False),
-                                         level = input_values.get('level', None)
-)
+    input_values = {
+        'df': input_y[0+i:1000+i],
+        # 'X_df': x[512+i:512+64+i],
+        'h': 64,
+        'time_col': 'Date',
+        'target_col': TARGETS_clean[0],
+        # 'add_history': True,
+        'level': [80]
+    }
 
+    timegpt_fcst_df = nixtla_client.forecast(df=input_values['df'],
+                                            X_df=input_values.get('X_df',None),
+                                            h=input_values['h'],
+                                            time_col=input_values['time_col'],
+                                            target_col=input_values['target_col'],
+                                            add_history=input_values.get('add_history', False),
+                                            level = input_values.get('level', None)
+    )
 
+    Fullforecast.append(timegpt_fcst_df)
+
+timegpt_fcst_df = pd.concat([array.iloc[[0]] for array in Fullforecast], ignore_index = True)
 
 # Save the forecast
-location = '/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/Output/TimeGPT/'
-now = datetime.now()
-date_string = now.strftime("%d%m%Y-%H%M%S")
-output_file = f'timegpt_{date_string}_Skip{skip}.pkl'
-save_to_pickle(input_values, timegpt_fcst_df, output_file=output_file, location=location)
+# location = '/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/Output/TimeGPT/'
+# now = datetime.now()
+# date_string = now.strftime("%d%m%Y-%H%M%S")
+# output_file = f'timegpt_{date_string}_Skip{skip}_Exo.pkl'
+# save_to_pickle(input_values, timegpt_fcst_df, output_file=output_file, location=location)
 
 # Load the forecast
 # location = '/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/Output/TimeGPT/'
-# input_file = f'timegpt_29042024-170635_Skip{skip}.pkl'
+# input_file = f'timegpt_29042024-185829_Skip{skip}.pkl'
 # input_values, timegpt_fcst_df = load_from_pickle(input_file=input_file, location=location)
 # print(input_values)
 
-# '''Scale back'''
+'''Scale back'''
 timegpt_fcst_df['Date'] = pd.to_datetime(timegpt_fcst_df['Date'])
 timegpt_fcst_df = timegpt_fcst_df.set_index('Date')
 temp = TimeSeries.from_series(

@@ -95,8 +95,8 @@ prediction_length = 64
 startPoint = 0
 endPoint = len(y)
 skip = 48
-savePickles = True # True will save pickles and don't plot, False will plot and don't save pickles
-historic = True # True will perform historical forecast, False will perform the normal forecast
+savePickles = False # True will save pickles and don't plot, False will plot and don't save pickles
+historic = False # True will perform historical forecast, False will perform the normal forecast
 
 pipeline = ChronosPipeline.from_pretrained(
     "amazon/chronos-t5-large",

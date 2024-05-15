@@ -1,10 +1,18 @@
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+import matplotlib as mpl
 from matplotlib.font_manager import FontProperties
 
 plt.style.reload_library()
 plt.style.use('grid')
 plt.rcParams['font.family'] = 'sans-serif'
+
+from aeml.utils.metrics import AE
+import numpy as np
+import pandas as pd
+from darts import TimeSeries
+from typing import List
 
 
 def plot_historical_forecast(df, 
@@ -13,7 +21,7 @@ def plot_historical_forecast(df,
                             title = None,
                             lower_percentile = None,
                             higher_percentile = None,
-                            output_Path = '/home/lsmo/Desktop/Files/1st Year/Papers/1st paper/Figures',
+                            output_Path = '/home/lsmo/Desktop/Files/1st Year/Papers/1st paper/Figures/V2',
                             output_Name = None,
                             labels = ['Actual', 'Forecast']
 ) -> None:
@@ -122,7 +130,7 @@ def plot_historical_forecast(df,
 def make_MAE_error_plot(time,
                         error,
                         title=None,
-                        output_Path='/home/lsmo/Desktop/Files/1st Year/Papers/1st paper/Figures',
+                        output_Path='/home/lsmo/Desktop/Files/1st Year/Papers/1st paper/Figures/V2',
                         output_Name=None,
                         error_type='Mean Absolute Error [MAE]',
                         log_scale=False
@@ -205,3 +213,122 @@ def make_MAE_error_plot(time,
     plt.show()
     
     return None
+
+def make_ae_error_plot(actual: List[TimeSeries], 
+                       predicted: List[TimeSeries], 
+                       time_horizon: List[str],
+                       title: str = None,
+                       output_Path: str ='/home/lsmo/Desktop/Files/1st Year/Papers/1st paper/Figures/V2', 
+                       output_Name: str = None, 
+                       error_type: str ='Absolute Error [AE]', 
+                       log_scale: bool = False,
+                       Violin: bool = True,
+                       Box: bool = False,
+                       showfliers: bool = False
+                       ):
+    
+    if Box and Violin or not Box and not Violin:
+        raise ValueError('Please select either Box or Violin plot')
+    
+    if not isinstance(actual, list) or not isinstance(predicted, list):
+        try:
+            actual = list(actual)
+            predicted = list(predicted)
+        except Exception as e:
+            raise ValueError(f'Could not convert the input to a list: {e}')
+
+    
+    error_ts_list = [AE(actual_ts, predicted_ts) for actual_ts, predicted_ts in zip(actual, predicted)]
+    error_values_list = [error_ts.values() for error_ts in error_ts_list]
+    # error_values_array = np.array(error_values_list)
+    # error_values_array = error_values_array.reshape(error_values_array.shape[:-1]).T
+
+
+    # Create subplots for each time horizon
+    plt.figure(figsize=(4.9, 2.1*2))
+
+    if Violin:
+    # Use list comprehension to plot each sublist separately
+        [plt.violinplot(sublist, showmeans=True, showmedians=True, positions=[i]) for i, sublist in enumerate(error_values_list)]
+    elif Box:
+    # Use list comprehension to plot each sublist separately
+        [plt.boxplot(sublist, widths = 0.5, showfliers=showfliers, showmeans=True, meanline=True, positions=[i]) for i, sublist in enumerate(error_values_list)]
+
+    '''Plot Information and decoration'''
+    plt.rcParams['font.family'] = 'sans-serif'
+
+    fpLegend = '/home/lsmo/.local/share/fonts/calibri-regular.ttf'
+    fpLegendtitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
+    fpTitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
+    fpLabel = '/home/lsmo/.local/share/fonts/Philosopher-Bold.ttf'
+    fpTicks = '/home/lsmo/.local/share/fonts/Philosopher-Regular.ttf'
+
+    fLegend = FontProperties(fname=fpLegend)
+    fLegendtitle = FontProperties(fname=fpLegendtitle)
+    fTitle = FontProperties(fname=fpTitle)
+    fLabel = FontProperties(fname=fpLabel)
+    fTicks = FontProperties( fname=fpTicks)
+    # Add labels and title and ticks
+    plt.ylabel('Absolute Error [AE]', fontproperties=fLabel)
+    plt.xlabel('Forecasting time horizon [hours]', fontproperties=fLabel)
+
+    if title is not None:
+        plt.title(title, fontproperties=fTitle)
+
+
+    for label in (plt.gca().get_xticklabels() + plt.gca().get_yticklabels()):
+        label.set_fontproperties(fTicks)
+    
+    # Add a frame around the plot area
+    plt.gca().spines['top'].set_visible(True)
+    plt.gca().spines['right'].set_visible(True)
+    plt.gca().spines['bottom'].set_visible(True)
+    plt.gca().spines['left'].set_visible(True)
+
+
+
+    # Create custom legend entries
+    if Box:
+        median_color = mpl.rcParams['boxplot.medianprops.color']
+        median_linestyle = mpl.rcParams['boxplot.medianprops.linestyle']
+
+        mean_color = mpl.rcParams['boxplot.meanprops.color']
+        mean_linestyle = mpl.rcParams['boxplot.meanprops.linestyle']
+
+        median_line = mlines.Line2D([], [], color=median_color, linestyle=median_linestyle, label='Median')
+        mean_line = mlines.Line2D([], [], color=mean_color, linestyle=mean_linestyle, label='Mean')
+
+        # Add the legend to the plot
+        plt.legend(handles=[median_line, mean_line], prop = fLegend)
+    
+    # Adjust font size for tick labels
+    plt.xticks(range(0, len(time_horizon)), time_horizon)  # Adjusted xticks range
+    plt.xticks(fontproperties=fTicks)
+    plt.yticks(fontproperties=fTicks)
+    plt.ylim(0, 110)
+    plt.grid(axis='x')
+
+    plt.tight_layout()
+    
+    if output_Name is not None:
+        plt.savefig(output_Path + '/' + output_Name + '.pdf', bbox_inches='tight')
+    
+    plt.show()
+
+    return None
+
+
+
+if __name__ == '__main__':
+    
+    actual1 = [TimeSeries.from_times_and_values(pd.date_range(start='1/1/2020', periods=4, freq='D'), [1, 1, 1, 1])]
+    actual2 = [TimeSeries.from_times_and_values(pd.date_range(start='1/1/2020', periods=4, freq='D'), [1, 1, 1, 1])]
+    predicted1 = [TimeSeries.from_times_and_values(pd.date_range(start='1/1/2020', periods=4, freq='D'), [3, 3, 4, 5])]
+    predicted2 = [TimeSeries.from_times_and_values(pd.date_range(start='1/1/2020', periods=4, freq='D'), [4, 4, 3, 2])]
+
+    actual = [actual1, actual2]
+    predicted = [predicted1, predicted2]
+    time_horizon = ['1 h', '2 h']
+
+    make_ae_error_plot(actual, predicted, time_horizon)
+    

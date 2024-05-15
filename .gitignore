@@ -396,3 +396,5 @@ wandb/
 # Ignore the RawData folder
 RawData/
 Output/
+KevinModel/
+ForecastPFN/
