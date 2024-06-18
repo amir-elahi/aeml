@@ -83,7 +83,7 @@ prediction_length = 64
 startPoint = 0
 endPoint = len(y)
 skip = 48
-savePickles = False # True will save pickles and don't plot, False will plot and don't save pickles
+savePickles = True # True will save pickles and don't plot, False will plot and don't save pickles
 historic = True # True will perform historical forecast, False will perform the normal forecast
 
 tfm = timesfm.TimesFm(
