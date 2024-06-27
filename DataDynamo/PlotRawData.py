@@ -1,32 +1,24 @@
 import pandas as pd 
 import numpy as np
 from darts import TimeSeries
-from darts.metrics import mape, mae, ope, mase
-from sklearn.linear_model import BayesianRidge
 
 from darts.dataprocessing.transformers import Scaler
-import joblib, pickle, subprocess
-
-from datetime import datetime
-import os
-
 
 from aeml.utils.Plot import *
-from aeml.utils.metrics import get_metrics
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-import matplotlib.lines as mlines
-import matplotlib as mpl
 from matplotlib.font_manager import FontProperties
 
 plt.style.reload_library()
 plt.style.use('grid')
 plt.rcParams['font.family'] = 'sans-serif'
 
+
+#! Script to plot the raw data with different averaging (each panel of Figure A3)
 # =============================================================================
 # Load the data
-df = pd.read_pickle('/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
+df = pd.read_pickle('./DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
 
 df = df.dropna()
 
@@ -93,11 +85,11 @@ for skip in [1, 24, 48, 96]:
 '''Plot Information and decoration'''
 # =============================================================================
 # Setting the font properties
-fpLegend = '/home/lsmo/.local/share/fonts/calibri-regular.ttf'
-fpLegendtitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-fpTitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-fpLabel = '/home/lsmo/.local/share/fonts/Philosopher-Bold.ttf'
-fpTicks = '/home/lsmo/.local/share/fonts/Philosopher-Regular.ttf'
+fpLegend = './DataDynamo/Fonts/calibri-regular.ttf'
+fpLegendtitle = './DataDynamo/Fonts/coolvetica rg.otf'
+fpTitle = './DataDynamo/Fonts/coolvetica rg.otf'
+fpLabel = './DataDynamo/Fonts/Philosopher-Bold.ttf'
+fpTicks = './DataDynamo/Fonts/Philosopher-Regular.ttf'
 
 fLegend = FontProperties(fname=fpLegend)
 fLegendtitle = FontProperties(fname=fpLegendtitle)

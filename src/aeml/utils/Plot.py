@@ -13,6 +13,9 @@ import numpy as np
 import pandas as pd
 from darts import TimeSeries
 from typing import List
+import os
+
+#! Script for scenario plot (Figure A1) and  event plot (Figure A2)
 
 
 def plot_historical_forecast(df, 
@@ -21,7 +24,7 @@ def plot_historical_forecast(df,
                             title = None,
                             lower_percentile = None,
                             higher_percentile = None,
-                            output_Path = '/home/lsmo/Desktop/Files/1st Year/Papers/1st paper/Figures/V2',
+                            output_Path = './DataDynamo/Plots',
                             output_Name = None,
                             labels = ['Actual', 'Forecast'],
                             ylabel = r'Emissions $[\mathrm{mg/nm^3}]$',
@@ -47,7 +50,7 @@ def plot_historical_forecast(df,
     higher_percentile : pd.DataFrame, optional
         The higher percentile of the forecast, by default None
     output_Path : str, optional
-        The path where the output will be saved, by default '/home/lsmo/Desktop/Files/1st Year/Papers/1st paper/Figures'
+        The path where the output will be saved, by default './DataDynamo/Plots'
     output_Name : str, optional
         The name of the output file, by default None. If None, the plot will be shown and not saved.
         
@@ -55,6 +58,9 @@ def plot_historical_forecast(df,
     -------
     None
     """
+
+    if not os.path.exists(output_Path):
+        os.makedirs(output_Path)
 
     plt.figure(figsize=(4.9, 2.1))
 
@@ -87,11 +93,11 @@ def plot_historical_forecast(df,
     '''Plot Information and decoration'''
     # =============================================================================
     # Setting the font properties
-    fpLegend = '/home/lsmo/.local/share/fonts/calibri-regular.ttf'
-    fpLegendtitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-    fpTitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-    fpLabel = '/home/lsmo/.local/share/fonts/Philosopher-Bold.ttf'
-    fpTicks = '/home/lsmo/.local/share/fonts/Philosopher-Regular.ttf'
+    fpLegend = './DataDynamo/Fonts/calibri-regular.ttf'
+    fpLegendtitle = './DataDynamo/Fonts/coolvetica rg.otf'
+    fpTitle = './DataDynamo/Fonts/coolvetica rg.otf'
+    fpLabel = './DataDynamo/Fonts/Philosopher-Bold.ttf'
+    fpTicks = './DataDynamo/Fonts/Philosopher-Regular.ttf'
 
     fLegend = FontProperties(fname=fpLegend)
     fLegendtitle = FontProperties(fname=fpLegendtitle)
@@ -146,7 +152,7 @@ def plot_historical_forecast(df,
 def make_MAE_error_plot(time,
                         error,
                         title=None,
-                        output_Path='/home/lsmo/Desktop/Files/1st Year/Papers/1st paper/Figures/V2',
+                        output_Path='./DataDynamo/Plots',
                         output_Name=None,
                         error_type='Mean Absolute Error [MAE]',
                         log_scale=False
@@ -163,7 +169,7 @@ def make_MAE_error_plot(time,
     title : str, optional
         The title of the plot, by default None. When None, no title is added.
     output_Path : str, optional
-        The path where the output will be saved, by default '/home/lsmo/Desktop/Files/1st Year/Papers/1st paper/Figures'
+        The path where the output will be saved, by default './DataDynamo/Plots'
     output_Name : str, optional
         The name of the output file, by default None. If None, the plot will be shown and not saved.
     error_type : str, optional
@@ -175,6 +181,10 @@ def make_MAE_error_plot(time,
     -------
     None
     """
+
+    if not os.path.exists(output_Path):
+        os.makedirs(output_Path)
+        
     plt.figure(figsize=(7, 3))
     plt.plot(time, error, label=error_type, color='red', lw=0.8)
     
@@ -185,11 +195,11 @@ def make_MAE_error_plot(time,
     '''Plot Information and decoration'''
     plt.rcParams['font.family'] = 'sans-serif'
 
-    fpLegend = '/home/lsmo/.local/share/fonts/calibri-regular.ttf'
-    fpLegendtitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-    fpTitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-    fpLabel = '/home/lsmo/.local/share/fonts/Philosopher-Bold.ttf'
-    fpTicks = '/home/lsmo/.local/share/fonts/Philosopher-Regular.ttf'
+    fpLegend = './DataDynamo/Fonts/calibri-regular.ttf'
+    fpLegendtitle = './DataDynamo/Fonts/coolvetica rg.otf'
+    fpTitle = './DataDynamo/Fonts/coolvetica rg.otf'
+    fpLabel = './DataDynamo/Fonts/Philosopher-Bold.ttf'
+    fpTicks = './DataDynamo/Fonts/Philosopher-Regular.ttf'
 
     fLegend = FontProperties(fname=fpLegend)
     fLegendtitle = FontProperties(fname=fpLegendtitle)
@@ -234,7 +244,7 @@ def make_ae_error_plot(actual: List[TimeSeries],
                        predicted: List[TimeSeries], 
                        time_horizon: List[str],
                        title: str = None,
-                       output_Path: str ='/home/lsmo/Desktop/Files/1st Year/Papers/1st paper/Figures/V2', 
+                       output_Path: str ='./DataDynamo/Plots', 
                        output_Name: str = None, 
                        error_type: str ='Absolute Error [AE]', 
                        log_scale: bool = False,
@@ -244,6 +254,9 @@ def make_ae_error_plot(actual: List[TimeSeries],
                        y_lim: tuple = (0, 110),
                        x_label: str = 'Forecasting time horizon [hours]'
                        ):
+    
+    if not os.path.exists(output_Path):
+        os.makedirs(output_Path)
     
     if Box and Violin or not Box and not Violin:
         raise ValueError('Please select either Box or Violin plot')
@@ -275,11 +288,11 @@ def make_ae_error_plot(actual: List[TimeSeries],
     '''Plot Information and decoration'''
     plt.rcParams['font.family'] = 'sans-serif'
 
-    fpLegend = '/home/lsmo/.local/share/fonts/calibri-regular.ttf'
-    fpLegendtitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-    fpTitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-    fpLabel = '/home/lsmo/.local/share/fonts/Philosopher-Bold.ttf'
-    fpTicks = '/home/lsmo/.local/share/fonts/Philosopher-Regular.ttf'
+    fpLegend = './DataDynamo/Fonts/calibri-regular.ttf'
+    fpLegendtitle = './DataDynamo/Fonts/coolvetica rg.otf'
+    fpTitle = './DataDynamo/Fonts/coolvetica rg.otf'
+    fpLabel = './DataDynamo/Fonts/Philosopher-Bold.ttf'
+    fpTicks = './DataDynamo/Fonts/Philosopher-Regular.ttf'
 
     fLegend = FontProperties(fname=fpLegend)
     fLegendtitle = FontProperties(fname=fpLegendtitle)
@@ -395,13 +408,12 @@ def make_scenario_plot():
     '''Plot Information and decoration'''
     plt.rcParams['font.family'] = 'sans-serif'
 
-    fpTitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-    fpLabel = '/home/lsmo/.local/share/fonts/Philosopher-Bold.ttf'
-    fpTicks = '/home/lsmo/.local/share/fonts/Philosopher-Regular.ttf'
+    fpTitle = './DataDynamo/Fonts/coolvetica rg.otf'
+    fpLabel = './DataDynamo/Fonts/Philosopher-Bold.ttf'
 
     fTitle = FontProperties(fname=fpTitle)
     fLabel = FontProperties(fname=fpLabel)
-    fTicks = FontProperties( fname=fpTicks)
+
     # Add labels and title and ticks
     axs[0,0].set_ylabel('Load [%]', fontproperties=fLabel)
     axs[1,0].set_ylabel('Load [%]', fontproperties=fLabel)
@@ -443,11 +455,10 @@ def make_event_plot(df, event_list, target_col):
     '''Plot Information and decoration'''
     plt.rcParams['font.family'] = 'sans-serif'
 
-    fpTitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-    fpLabel = '/home/lsmo/.local/share/fonts/Philosopher-Bold.ttf'
-    fpTicks = '/home/lsmo/.local/share/fonts/Philosopher-Regular.ttf'
+    fpTitle = './DataDynamo/Fonts/coolvetica rg.otf'
+    fpLabel = './DataDynamo/Fonts/Philosopher-Bold.ttf'
+    fpTicks = './DataDynamo/Fonts/Philosopher-Regular.ttf'
 
-    fTitle = FontProperties(fname=fpTitle)
     fLabel = FontProperties(fname=fpLabel)
     fTicks = FontProperties( fname=fpTicks)
     # Add labels and title and ticks
@@ -483,48 +494,42 @@ def make_event_plot(df, event_list, target_col):
 
 if __name__ == '__main__':
     
-    # actual1 = [TimeSeries.from_times_and_values(pd.date_range(start='1/1/2020', periods=4, freq='D'), [1, 1, 1, 1])]
-    # actual2 = [TimeSeries.from_times_and_values(pd.date_range(start='1/1/2020', periods=4, freq='D'), [1, 1, 1, 1])]
-    # predicted1 = [TimeSeries.from_times_and_values(pd.date_range(start='1/1/2020', periods=4, freq='D'), [3, 3, 4, 5])]
-    # predicted2 = [TimeSeries.from_times_and_values(pd.date_range(start='1/1/2020', periods=4, freq='D'), [4, 4, 3, 2])]
-
-    # actual = [actual1, actual2]
-    # predicted = [predicted1, predicted2]
-    # time_horizon = ['1 h', '2 h']
-
-    # make_ae_error_plot(actual, predicted, time_horizon)
-    
-    ##############################################################
-    # make_scenario_plot()
+    # True for scenario plot (Figure A1) and False for event plot (Figure A2)
+    scenario_plot = False
 
     ##############################################################
-    df = pd.read_pickle('./DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
+    if scenario_plot:
+        make_scenario_plot()
 
-    df = df.dropna()
+    else: 
+        ##############################################################
+        df = pd.read_pickle('./DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
 
-    df['TI-1213'] = np.where(df['valve position'] == 1, df['TI-13'], df['TI-12'])
+        df = df.dropna()
 
-    TARGETS_clean = ['AMP-4', 'PZ-4'] 
+        df['TI-1213'] = np.where(df['valve position'] == 1, df['TI-13'], df['TI-12'])
 
-    MEAS_COLUMNS = [ 'T-19', 'TI-3', 'F-19','F-11', 'TI-1213','TI-35']
+        TARGETS_clean = ['AMP-4', 'PZ-4'] 
 
-    event_list = [
-        [(pd.Timestamp('2024-03-01 09:30:00'), pd.Timestamp('2024-03-01 12:00:00'))],
-        [(pd.Timestamp('2024-03-05 07:00:00'), pd.Timestamp('2024-03-05 11:00:00'))],
-        [(pd.Timestamp('2024-03-06 09:00:00'), pd.Timestamp('2024-03-06 10:00:00'))],
-        [(pd.Timestamp('2024-03-07 09:20:00'), pd.Timestamp('2024-03-07 10:30:00'))],
-        [(pd.Timestamp('2024-03-18 15:00:00'), pd.Timestamp('2024-03-18 17:30:00'))],
-        [(pd.Timestamp('2024-03-18 21:45:00'), pd.Timestamp('2024-03-18 22:45:00'))],
-        [(pd.Timestamp('2024-03-02 08:50:00'), pd.Timestamp('2024-03-02 11:30:00'))],
-        [(pd.Timestamp('2024-03-04 09:00:00'), pd.Timestamp('2024-03-04 11:30:00'))],
-        [(pd.Timestamp('2024-03-07 17:00:00'), pd.Timestamp('2024-03-07 17:50:00'))],
-        [(pd.Timestamp('2024-03-10 18:40:00'), pd.Timestamp('2024-03-10 21:10:00'))],
-        [(pd.Timestamp('2024-03-11 01:10:00'), pd.Timestamp('2024-03-11 02:00:00'))],
-        [(pd.Timestamp('2024-03-13 08:45:00'), pd.Timestamp('2024-03-13 11:11:00'))],
-        [(pd.Timestamp('2024-03-12 00:12:00'), pd.Timestamp('2024-03-12 01:00:00'))],
-        [(pd.Timestamp('2024-03-11 16:00:00'), pd.Timestamp('2024-03-11 18:25:00'))],
-        [(pd.Timestamp('2024-03-11 22:45:00'), pd.Timestamp('2024-03-11 23:35:00'))],
+        MEAS_COLUMNS = [ 'T-19', 'TI-3', 'F-19','F-11', 'TI-1213','TI-35']
 
-    ]
+        event_list = [
+            [(pd.Timestamp('2024-03-01 09:30:00'), pd.Timestamp('2024-03-01 12:00:00'))],
+            [(pd.Timestamp('2024-03-05 07:00:00'), pd.Timestamp('2024-03-05 11:00:00'))],
+            [(pd.Timestamp('2024-03-06 09:00:00'), pd.Timestamp('2024-03-06 10:00:00'))],
+            [(pd.Timestamp('2024-03-07 09:20:00'), pd.Timestamp('2024-03-07 10:30:00'))],
+            [(pd.Timestamp('2024-03-18 15:00:00'), pd.Timestamp('2024-03-18 17:30:00'))],
+            [(pd.Timestamp('2024-03-18 21:45:00'), pd.Timestamp('2024-03-18 22:45:00'))],
+            [(pd.Timestamp('2024-03-02 08:50:00'), pd.Timestamp('2024-03-02 11:30:00'))],
+            [(pd.Timestamp('2024-03-04 09:00:00'), pd.Timestamp('2024-03-04 11:30:00'))],
+            [(pd.Timestamp('2024-03-07 17:00:00'), pd.Timestamp('2024-03-07 17:50:00'))],
+            [(pd.Timestamp('2024-03-10 18:40:00'), pd.Timestamp('2024-03-10 21:10:00'))],
+            [(pd.Timestamp('2024-03-11 01:10:00'), pd.Timestamp('2024-03-11 02:00:00'))],
+            [(pd.Timestamp('2024-03-13 08:45:00'), pd.Timestamp('2024-03-13 11:11:00'))],
+            [(pd.Timestamp('2024-03-12 00:12:00'), pd.Timestamp('2024-03-12 01:00:00'))],
+            [(pd.Timestamp('2024-03-11 16:00:00'), pd.Timestamp('2024-03-11 18:25:00'))],
+            [(pd.Timestamp('2024-03-11 22:45:00'), pd.Timestamp('2024-03-11 23:35:00'))],
 
-    make_event_plot(df, event_list, TARGETS_clean[0])
+        ]
+
+        make_event_plot(df, event_list, TARGETS_clean[0])

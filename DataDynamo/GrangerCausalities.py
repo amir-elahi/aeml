@@ -1,67 +1,25 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from statistics_1 import check_stationarity
 from aeml.eda.statistics import computer_granger_causality_matrix
-import warnings
 
-import matplotlib.dates as mdates
+
 import matplotlib.pyplot as plt
-import matplotlib.lines as mlines
-import matplotlib as mpl
 from matplotlib.font_manager import FontProperties
 
 plt.style.reload_library()
 plt.style.use('grid')
 plt.rcParams['font.family'] = 'sans-serif'
 
-warnings.filterwarnings("ignore")
+#! Script to check the Granger Causality between the variables (Figure A4)
 
-df = pd.read_pickle('/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
+df = pd.read_pickle('./DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
 
 df = df.dropna()
 
 df['TI-1213'] = np.where(df['valve position'] == 1, df['TI-13'], df['TI-12'])
 
 TARGETS_clean = ["AMP-4", "PZ-4"] 
-
-# MEAS_COLUMNS = [
-
-# 'PI-2',
-# 'TI-2',
-# 'F-3',
-# 'PI-3',
-# 'TI-3',
-# 'CO2-3',
-# 'O2-3',
-# 'TI-33',
-# 'TI-35',
-# 'TI-4',
-# 'CO2-4',
-# 'F-11',
-# 'TI-13',
-# 'FI-211',
-# 'TI-8',
-# 'TI-5',
-# 'TI-28',
-# 'PI-30',
-# 'F-30',
-# 'P-38',
-# 'T-36',
-# 'F-19',
-# 'T-19',
-# 'PI-1',
-# 'F-40',
-# 'F-23',
-# 'Level Desorber',
-# 'TI-24',
-# 'FI-25',
-# 'TI-16',
-# 'TI-151',
-# 'TI-212',
-# 'TI-241',
-# 'valve position'
-# ]
 
 MEAS_COLUMNS = [
 
@@ -154,20 +112,6 @@ MEAS_COLUMNS = [
 def average_timeseries(df, skip):
     return df.rolling(window=skip, min_periods=1).mean()[::skip]
 
-# stationary_test_result = check_stationarity(series=df['TI-3'])
-# print(stationary_test_result['adf']['stationary'] == False)
-
-# for column in df.columns:
-#     stationary_test_result = check_stationarity(series=df[column])
-
-#     # print(df.iloc[0,0:4])
-#     # print(df.info())
-#     if (stationary_test_result['adf']['stationary'] == True or stationary_test_result['kpss']['stationary'] == True):
-#         print(column, end='\n')
-#         print(stationary_test_result)
-#         print('-' * 50)
-
-
 
 result = pd.DataFrame()
 
@@ -175,12 +119,12 @@ for skip in [1, 24, 48, 96]:
 
     dfnew = average_timeseries(df, skip)
     
-    causality_matrix = computer_granger_causality_matrix(dfnew, xs=MEAS_COLUMNS, ys=[TARGETS_clean[1]])
+    causality_matrix = computer_granger_causality_matrix(dfnew, xs=MEAS_COLUMNS, ys=[TARGETS_clean[0]])
     
     if skip == 1:
-        causality_matrix.columns = [f'Pz without averaging']
+        causality_matrix.columns = [f'AMP without averaging']
     else:
-        causality_matrix.columns = [f'Average Pz over {skip} points']    
+        causality_matrix.columns = [f'Average AMP over {skip} points']    
 
     # Append the results column-wise
     if result.empty:
@@ -205,11 +149,11 @@ plt.yticks(np.arange(len(filtered_result.index)), filtered_result.index)
 '''Plot Information and decoration'''
 # =============================================================================
 # Setting the font properties
-fpLegend = '/home/lsmo/.local/share/fonts/calibri-regular.ttf'
-fpLegendtitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-fpTitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-fpLabel = '/home/lsmo/.local/share/fonts/Philosopher-Bold.ttf'
-fpTicks = '/home/lsmo/.local/share/fonts/Philosopher-Regular.ttf'
+fpLegend = './DataDynamo/Fonts/calibri-regular.ttf'
+fpLegendtitle = './DataDynamo/Fonts/coolvetica rg.otf'
+fpTitle = './DataDynamo/Fonts/coolvetica rg.otf'
+fpLabel = './DataDynamo/Fonts/Philosopher-Bold.ttf'
+fpTicks = './DataDynamo/Fonts/Philosopher-Regular.ttf'
 
 fLegend = FontProperties(fname=fpLegend)
 fLegendtitle = FontProperties(fname=fpLegendtitle)

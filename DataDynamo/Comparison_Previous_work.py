@@ -4,10 +4,11 @@ import joblib
 from darts import TimeSeries
 from darts.dataprocessing.transformers import Scaler
 
-import sys
-sys.path.insert(0, '/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/Utils2/')
-from Plot import plot_historical_forecast
-from metrics import get_metrics
+
+from aeml.utils.Plot import plot_historical_forecast
+from aeml.utils.metrics import get_metrics
+
+#! Script to plot the historical forecast with the model trained from the work of Jablonka et al. (2020) (Figure 7)
 
 np.random.seed(42)
 
@@ -71,7 +72,7 @@ y_train, y_val = y[:train_length] , y[train_length:]
 x_train, x_val = x[:train_length] , x[train_length:]
 
 
-file = '/home/lsmo/Desktop/aeml_project/aeml/DataDynamo/KevinModel/20240208-095601_model_all_data_0_step_60'
+file = './DataDynamo/JablonkaModel/20240208-095601_model_all_data_0_step_60'
 gbdt_all_data_0 = joblib.load(file)
 
 historical_forceasts_0 = gbdt_all_data_0.historical_forecasts(
@@ -114,5 +115,5 @@ plot_historical_forecast(df = y_actual.pd_dataframe(),
                         lower_percentile = lower_percentile.values.ravel(),
                         higher_percentile = higher_percentile.values.ravel(),
                         target_col = TARGETS_clean[0],
-                        time_col = 'Date',
-                        title = None)
+                        title = None,
+                        labels = None)

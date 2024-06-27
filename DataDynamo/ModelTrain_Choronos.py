@@ -1,21 +1,13 @@
 import pandas as pd 
 import numpy as np
 from darts import TimeSeries
-from darts.models import RegressionModel, LightGBMModel
-from darts.metrics import mape, mae, ope, mase
-from sklearn.linear_model import BayesianRidge
-from aeml.models.gbdt.gbmquantile import LightGBMQuantileRegressor
-from aeml.models.gbdt.run import run_ci_model, run_model
 from aeml.models.gbdt.settings import *
-from aeml.models.gbdt.plot import make_forecast_plot
 
 
 from darts.dataprocessing.transformers import Scaler
-import joblib, pickle, subprocess
+import pickle, subprocess
 
-import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-from matplotlib.font_manager import FontProperties
 
 plt.style.reload_library()
 # plt.style.use('grid')
@@ -29,12 +21,15 @@ from transformers import set_seed
 from datetime import datetime
 import os
 
+from aeml.utils.Plot import *
+
+
+#! This is the script to train the Chronos model and make predictions.
+#! It can either save to a .pkl file and plot with PlotHistoricalForecast.py or you can plot here 
+#! (Figure 5a, Figure 6a, Figure A5 )
+
 """
 # =============================================================================
-Script Name: ModelTrain_Choronos.py
-Author(s) <Abrevation>: Amir Elahi <AE>
-Date: 6 April 2022
-
 TL;DR:
     This script is used to train the Chronos model on the data and make predictions.
 
@@ -42,28 +37,18 @@ Description:
     This Python script does the histrical forecast of the data using Chronos model.
     It can average and skip the data points to reduce the number of points to be fed to the model.
 
-Usage:
-    Produce histroical forecast of the data using Chronos model.
-
 Dependencies:
     Refer to the *.yml file based on your operating system.
-
-Notes:
-    < >.
-
-#TODO:
-    < >.
 
 Version History:
     <Date>, <Author>, <Description of Changes>
     6  April 2022 AE Add the historical forecast and averaging of the data using Chronos model.
     8  April 2022 AE Configure the plotting and saving of the output. Adding flags to make it easier to use.
     14 April 2022 AE Minor changes in plotting.
+    27 June  2022 AE Ready for the first release.
 
 # =============================================================================
 """
-
-
 
 df = pd.read_pickle('./DataDynamo/RawData/New_campaigns/202403 SCOPE data set dynamic campaign.pkl')
 
@@ -85,8 +70,6 @@ x = transformer.fit_transform(x)
 y_transformer = Scaler()
 y = y_transformer.fit_transform(y)
 
-scal = y_transformer.transform(y)
-
 #* Set the seed for reproducibility
 set_seed(42)
 
@@ -94,13 +77,14 @@ set_seed(42)
 prediction_length = 64
 startPoint = 0
 endPoint = len(y)
-skip = 48
-savePickles = False # True will save pickles and don't plot, False will plot and don't save pickles
-historic = False # True will perform historical forecast, False will perform the normal forecast
+skip = 158
+savePickles = True # True will save pickles and don't plot, False will plot and don't save pickles
+historic = True # True will perform historical forecast, False will perform the normal forecast
 
+#* Load the model (You can use cuda if you have a GPU)
 pipeline = ChronosPipeline.from_pretrained(
-    "amazon/chronos-t5-large",
-    device_map="cuda",
+    "amazon/chronos-t5-tiny",
+    device_map="cpu",
     torch_dtype=torch.bfloat16,
 )
 
@@ -112,19 +96,23 @@ Ts1 = y[startPoint:endPoint]
 # Skip is the number of points to skip and it selects the last point of every skip points
 Ts2 = y[startPoint:endPoint:skip]
 # =============================================================================
-# Averaging is used to average the points in the time series instead of skipping
-def average_timeseries(y, startPoint, endPoint, skip):
-    averaged_values = []
-    for i in range(startPoint, endPoint, skip):
-        avg = sum(y.values()[i:i+skip]) / skip
-        averaged_values.append(avg)
-    return averaged_values
+# This averages skip point in the time series. example: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10: skip=2, then 1, 2.5, 4.5, 6.5, 8.5
+def average_timeseries(df, skip):
+    return df.rolling(window=skip, min_periods=1).mean()[::skip]
 
-Ts3 = average_timeseries(y, startPoint, endPoint, skip)
-Ts3 = TimeSeries.from_times_and_values(times = y[startPoint:endPoint:skip].time_index, values = Ts3)
-Ts3 = Ts3.pd_dataframe()
-Ts3.columns = y.pd_dataframe().columns
-Ts3 = TimeSeries.from_dataframe(Ts3)
+# Convert TimeSeries to DataFrame for processing
+df_y = y.pd_dataframe()
+
+# Apply averaging function
+temp_y = average_timeseries(df_y, skip)
+temp_y.columns = y.pd_dataframe().columns
+ts_y = TimeSeries.from_dataframe(temp_y)
+df_y= temp_y
+
+# Split the dataset because we are not very interested in the zero values at the end
+ds = int(92241/skip)
+
+Ts3 = ts_y[:ds]
 # =============================================================================
 
 #* Select the time series to use
@@ -147,28 +135,27 @@ for step in range(0, (len(Ts) - 512 - prediction_length)):
     forecast = pipeline.predict(
         context,
         prediction_length,
-        num_samples = 20,
+        num_samples = 3,
         limit_prediction_length=True) 
-
-    forecast_index = range(len(df), len(df) + prediction_length)
 
     low, median, high = np.quantile(forecast[0].numpy(), [0.1, 0.5, 0.9], axis=0)
 
-    forecast = TimeSeries.from_times_and_values(times = TheSeries[TARGETS_clean[0]][-prediction_length:].time_index, values = median)
-    # forecast.plot(label = f'step {step} Forecast')
-    # plt.fill_between(TheSeries[TARGETS_clean[0]][-prediction_length:].time_index, low, high, color="tomato", alpha=0.3)
+    forecast = TimeSeries.from_times_and_values(times = TheSeries[TARGETS_clean[0]][-prediction_length:].time_index, 
+                                                values = median,
+                                                columns=[TARGETS_clean[0]]
+                                                )
+
     FullForecast.append(forecast)
     FullLow.append(low)
     FullHigh.append(high)
+
     if not historic:
         break
 
-
 FullForecast_df = [ts.pd_dataframe() for ts in FullForecast]
+for df in FullForecast_df:
+    df.columns = [TARGETS_clean[0]]
 
-# for i in range(0, len(FullForecast)):
-#     FullForecast[i][-1].plot(label = f'step {i} Forecast')
-#     plt.fill_between(TheSeries[TARGETS_clean[0]][-prediction_length:].time_index, FullLow[i][-1], FullHigh[i][-1], color="tomato", alpha=0.3)
 
 
 if savePickles:
@@ -195,38 +182,27 @@ if savePickles:
 else:
     if historic:
         # =============================================================================
-        # Extract the first point of each time series
-        first_points_values = [ts.first_value() for ts in FullForecast]
-        first_points_times = [ts.time_index[0] for ts in FullForecast]
+        # Extract the prediction point from the historical forecast
+        # Which prediction point in histoical forecast to get and plot. from 0 to len(FullForecast[0]) - 1
+        prediction_point = len(FullForecast[0]) - 1
+        prediction_time = (prediction_point + 1) * skip * 10 / 60 # In minutes
 
-        # Create a new time series from the first points
-        first_points_ts = TimeSeries.from_times_and_values(pd.DatetimeIndex(first_points_times), first_points_values)
+        # Extract the point of each time series
+        point_selected_values = [ts.values()[prediction_point] for ts in FullForecast]
+        point_selected_times = [ts.time_index[prediction_point] for ts in FullForecast]
 
-        first_points_values_Low = [array[0] for array in FullLow]
-        first_points_values_High = [array[0] for array in FullHigh]
+        # Create a new time series from the points
+        point_selected_ts = TimeSeries.from_times_and_values(pd.DatetimeIndex(point_selected_times), point_selected_values)
 
-        # Extract the middle point of each time series
-        middle_points_values = [ts.values()[len(ts.values()) // 2] for ts in FullForecast]
-        middle_points_times = [ts.time_index[len(ts.values()) // 2] for ts in FullForecast]
+        point_selected_values_Low = [array[prediction_point] for array in FullLow]
+        point_selected_values_High = [array[prediction_point] for array in FullHigh]
 
-        # Create a new time series from the middle points
-        middle_points_ts = TimeSeries.from_times_and_values(pd.DatetimeIndex(middle_points_times), middle_points_values)
 
-        middle_points_values_Low = [array[len(array) // 2] for array in FullLow]
-        middle_points_values_High = [array[len(array) // 2] for array in FullHigh]
-
-        # Extract the last point of each time series
-        last_points_values = [ts.last_value() for ts in FullForecast]
-        last_points_times = [ts.time_index[-1] for ts in FullForecast]
-
-        # Create a new time series from the last points
-        last_points_ts = TimeSeries.from_times_and_values(pd.DatetimeIndex(last_points_times), last_points_values)
-
-        last_points_values_Low = [array[-1] for array in FullLow]
-        last_points_values_High = [array[-1] for array in FullHigh]
-
+        point_selected_df = point_selected_ts.pd_dataframe()
+        point_selected_df.columns = [TARGETS_clean[0]]
+        point_selected_df.index.name = 'Date'
         # Choose between the first, middle and last points
-        historical_forecast = last_points_ts
+        historical_forecast = TimeSeries.from_dataframe(point_selected_df)
         # =============================================================================
     else:
         Forecast = FullForecast[0]
@@ -237,81 +213,23 @@ else:
     if historic:
         '''Plotting'''
         # =============================================================================
-        # Plot the time series
-        fig = plt.figure(figsize=(3.5*3, 0.6*3.5*3))
-        fig.subplots_adjust(bottom=0.2, left= 0.1)
-
-        TheSeries[TARGETS_clean[0]].plot(label=f'True values averaging every {skip - 1} points')
-        TheSeries[TARGETS_clean[0]][:512].plot(label=f'First 512 true values')
-
-        historical_forecast.plot(label='Historical Forecast')
-        plt.fill_between(last_points_times, last_points_values_Low, last_points_values_High, color="tomato", alpha=0.3, label="80% prediction interval")
+        plot_historical_forecast(df = TheSeries.pd_dataframe(),
+                        forecast = historical_forecast.pd_dataframe(),
+                        lower_percentile = point_selected_values_Low,
+                        higher_percentile = point_selected_values_High,
+                        target_col = TARGETS_clean[0],
+                        ShowEvent=False,
+                        labels = None,
+                        )    
     else: 
         '''Plotting'''
         # =============================================================================
         # Plot the time series
-        fig = plt.figure(figsize=(2.5*3.5/1.2, 1.8*3.5/1.2))
-        fig.subplots_adjust(bottom=0.2, left= 0.15)
-
-        TheSeries[TARGETS_clean[0]].plot(label=f'True values')
-        # TheSeries[TARGETS_clean[0]][-prediction_length-512:-prediction_length].plot(label=f'True input values')
-
-        Forecast.plot(label='Forecast')
-        plt.fill_between(Forecast.time_index, FullLow[0], FullHigh[0], color="tomato", alpha=0.3, label="80% prediction interval")
-
-
-    '''Plot Information and decoration'''
-    # =============================================================================
-    # Setting the font properties
-    plt.rcParams['font.family'] = 'sans-serif'
-
-    fpLegend = '/home/lsmo/.local/share/fonts/calibri-regular.ttf'
-    fpLegendtitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-    fpTitle = '/home/lsmo/.local/share/fonts/coolvetica rg.otf'
-    fpLabel = '/home/lsmo/.local/share/fonts/Philosopher-Bold.ttf'
-    fpTicks = '/home/lsmo/.local/share/fonts/Philosopher-Regular.ttf'
-
-    fLegend = FontProperties(fname=fpLegend, size = 13)
-    fLegendtitle = FontProperties(fname=fpLegendtitle, size = 14)
-    fTitle = FontProperties(fname=fpTitle, size = 18)
-    fLabel = FontProperties(fname=fpLabel, size = 16)
-    fTicks = FontProperties(fname=fpTicks, size = 15)
-
-    # =============================================================================
-    # Add labels and title and ticks
-    plt.ylabel(r'Emissions $[\mathrm{mg/nm^3}]$', fontproperties = fLabel)
-    plt.xlabel('Date', fontproperties = fLabel)
-    adsorbent_in_plot = r'2-Amino-2-methylpropanol $(\mathrm{C_4H_{11}NO})$'
-    plt.title( f'{adsorbent_in_plot}'
-            , fontproperties = fTitle)
-
-    for label in (plt.gca().get_xticklabels() + plt.gca().get_yticklabels()):
-        label.set_fontproperties(fTicks)
-
-    # =============================================================================
-    # Add a frame around the plot area
-    plt.gca().spines['top'].set_visible(True)
-    plt.gca().spines['right'].set_visible(True)
-    plt.gca().spines['bottom'].set_visible(True)
-    plt.gca().spines['left'].set_visible(True)
-
-    # =============================================================================
-    # Add a legend
-    legend = plt.legend(fontsize = 12, prop = fLegend)
-    legend.set_title('Legend', prop = fLegendtitle)
-
-    # =============================================================================
-    # Set the date format
-    date_format = mdates.DateFormatter('%b-%d')
-    plt.gca().xaxis.set_major_formatter(date_format)
-
-    # =============================================================================
-    # Adjust font size for tick labels
-    plt.xticks(rotation='vertical', fontproperties = fTicks)
-    plt.yticks(fontproperties = fTicks)
-    # =============================================================================
-    # Adjust the y and x limits
-    # plt.ylim(99.52176895141602, 122.39603195190428)
-    # plt.xlim(19787.72662037037, 19788.139120370368 )
-
-    plt.show()
+        plot_historical_forecast(df = TheSeries.pd_dataframe(),
+                        forecast = Forecast.pd_dataframe(),
+                        lower_percentile = FullLow[0],
+                        higher_percentile = FullHigh[0],
+                        target_col = TARGETS_clean[0],
+                        ShowEvent=False,
+                        labels = None,
+                        )  

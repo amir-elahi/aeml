@@ -6,10 +6,7 @@ import wandb
 
 from darts.dataprocessing.transformers import Scaler
 
-import sys
-sys.path.insert(0, '/home/amir/Projects/aeml/DataDynamo/Utils2/')
-from sweep import start_sweep
-from metrics import get_metrics
+from aeml.utils.metrics import get_metrics
 
 ''' Sweep Configuration for wandb'''
 
@@ -135,7 +132,6 @@ def objective(config,
                                 output_chunk_length=64,
                                 quantiles=(0.1, 0.5, 0.9))
 
-    # forecast_0 = gbdt_all_data_0.forecast(n=64 ,series = y_train[Target], past_covariates = x_train)
 
     backtest_train = gbdt_all_data_0.historical_forecasts(series=y_train[Target],
                                                           past_covariates=x_train,
