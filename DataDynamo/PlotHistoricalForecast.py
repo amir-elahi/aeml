@@ -63,10 +63,10 @@ MEAS_COLUMNS = [ 'T-19', 'TI-3', 'F-19','F-11', 'TI-1213','TI-35']
 
 # =============================================================================
 # Pickle names and paths
-commit_id = 'c7071ee'
-date_string = '08042024_041232'
+commit_id = '06c2271'
+date_string = '26062024_151517'
 Model='Tiny_Model'
-output_path = os.getcwd() + f'/DataDynamo/Output/{Model}/'
+output_path = os.getcwd() + f'/DataDynamo/Output/{Model}/1.2.0/'
 skip = 48
 
 # =============================================================================
@@ -188,24 +188,25 @@ print(metrics)
 #                         lower_percentile = point_selected_values_Low[: ds-512-63],
 #                         higher_percentile = point_selected_values_High[: ds-512-63],
 #                         target_col = TARGETS_clean[0],
+#                         ShowEvent=True,
 #                         labels = None,
 #                         # title = f'Historical Forecast at {prediction_time} minutes',
 # )                        
 
-plot_historical_forecast(df = x_actual.pd_dataframe(),
-                        forecast = None,
-                        lower_percentile = None,
-                        higher_percentile = None,
-                        target_col = MEAS_COLUMNS[3],
-                        labels = None,
-                        ylabel = r'Flow rate $[\mathrm{kg/h}]$'
-                        # title = f'Historical Forecast at {prediction_time} minutes',
-)                        
+# plot_historical_forecast(df = x_actual.pd_dataframe(),
+#                         forecast = None,
+#                         lower_percentile = None,
+#                         higher_percentile = None,
+#                         target_col = MEAS_COLUMNS[3],
+#                         labels = None,
+#                         ylabel = r'Flow rate $[\mathrm{kg/h}]$'
+#                         # title = f'Historical Forecast at {prediction_time} minutes',
+# )                        
 
-# make_ae_error_plot(y_actual_list[::5] + [y_actual_list[-1]], 
-#                    y_forecast_list[::5] + [y_forecast_list[-1]], 
-#                    time_horizon[::5] + [time_horizon[-1]],
-#                    Violin=False,
-#                    Box=True,
-#                    output_Name=f'Chronos_{skip}_Error'
-#                    )
+make_ae_error_plot(y_actual_list[::5] + [y_actual_list[-1]], 
+                   y_forecast_list[::5] + [y_forecast_list[-1]], 
+                   time_horizon[::5] + [time_horizon[-1]],
+                   Violin=False,
+                   Box=True,
+                #    output_Name=f'Chronos_{skip}_Large_Error'
+                   )
