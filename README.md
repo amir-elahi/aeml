@@ -51,7 +51,7 @@ $ conda activate yourEnvName
 $ pip install git+https://github.com/amazon-science/chronos-forecasting.git
 ```
 
-Go on and play with the notebooks and codes in the `./DataDynamo` Directory
+Go on and play with the notebooks and codes in the `./DataDynamo` Directory. I recommend to start with the `./DataDynamo/Simple_example.ipynb` notebook.
 
 ## 📦 packages used
 
