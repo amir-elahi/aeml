@@ -114,10 +114,14 @@ def average_timeseries(df, skip):
 
 
 result = pd.DataFrame()
+dfnew = pd.DataFrame()
 
-for skip in [1, 24, 48, 96]:
+for skip in [196]:
 
-    dfnew = average_timeseries(df, skip)
+    dfnew[MEAS_COLUMNS] = average_timeseries(df[MEAS_COLUMNS], skip)
+    dfnew[TARGETS_clean] = average_timeseries(df[TARGETS_clean], skip)
+
+    dfnew['Date'] = df['Date']
     
     causality_matrix = computer_granger_causality_matrix(dfnew, xs=MEAS_COLUMNS, ys=[TARGETS_clean[0]])
     

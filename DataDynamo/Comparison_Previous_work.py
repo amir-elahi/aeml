@@ -72,7 +72,7 @@ y_train, y_val = y[:train_length] , y[train_length:]
 x_train, x_val = x[:train_length] , x[train_length:]
 
 
-file = './DataDynamo/JablonkaModel/20240208-095601_model_all_data_0_step_60'
+file = './DataDynamo/KevinModel/20240208-095601_model_all_data_0_step_60'
 gbdt_all_data_0 = joblib.load(file)
 
 historical_forceasts_0 = gbdt_all_data_0.historical_forecasts(
